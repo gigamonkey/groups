@@ -8,8 +8,12 @@ from collections import defaultdict
 from itertools import combinations
 from random import choice
 
+from score import score
+
+
 def make_pairs(people):
     return {frozenset(p) for p in combinations(people, 2)}
+
 
 def next_pair(pairs, fn):
     return next(filter(fn, pairs), None)
@@ -28,7 +32,6 @@ def random_person(people, g):
 
 
 def make_group(pairs, people, n):
-    print(f"New group {len(pairs)} pairs left.")
     g = set()
     while n > 0:
         to_add = (
@@ -36,16 +39,9 @@ def make_group(pairs, people, n):
             or next_pair(pairs, overlapping(g))
             or random_person(people, g)
         )
-        if len(to_add) == 1:
-            print(f"Adding random person: {list(to_add)[0]}")
-        else:
-            print(f"Adding pair: {to_add}")
-
         n -= len(to_add)
         g.update(to_add)
 
-    print(f"Group {tuple(sorted(g))}")
-    print()
     return tuple(sorted(g))
 
 
@@ -73,16 +69,6 @@ def check(groups, people):
 
     assert all(v == people for v in met.values())
 
-    for p, ms in counts.items():
-        for p2, c in ms.items():
-            if c > 1 and p != p2:
-                print(f"{p} met {p2} {c} times.")
-
-    expected = (len(people) - 1) / len(groups[0])
-    avg = sum(n for n in num_groups.values()) / len(people)
-
-    print(f"Expected: {expected:.2f}; Average: {avg:.2f}")
-
 
 if __name__ == "__main__":
 
@@ -102,6 +88,7 @@ if __name__ == "__main__":
     gs = list(groups(people, args.size))
 
     check(gs, people)
+    print(score(gs, people))
 
     for g in gs:
         print(g)

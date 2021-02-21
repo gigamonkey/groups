@@ -25,22 +25,13 @@ from random import shuffle
 import json
 import sys
 
+from score import score
 
 population_size = 1_000
 mutation_probability = 0.01
 overlap = 0.10
 children_per_pair = 4
 
-
-@dataclass
-class Fitness:
-    exact: int = 0
-    missing: int = 0
-    extra: int = 0
-
-    @property
-    def fitness(self):
-        return self.exact - (100 * self.missing) - self.extra
 
 def shuffled(xs):
     copy = xs[:]
@@ -57,11 +48,12 @@ def extract_pairs(dna, n):
     for g in extract_groups(dna, n):
         yield from pairs(g)
 
+
 def extract_groups(dna, n):
     if dna:
         end = len(dna[0]) - (len(dna[0]) % n)
         for g in dna:
-            yield from (g[i:i+n] for i in range(0, end, n))
+            yield from (g[i : i + n] for i in range(0, end, n))
 
 
 def pairs(xs):
@@ -69,23 +61,14 @@ def pairs(xs):
 
 
 def fitness(dna, n):
-    counts = Counter(extract_pairs(dna, n))
-    f = Fitness()
-    for p in pairs(dna[0]):
-        c = counts[p]
-        if c == 1:
-            f.exact += 1
-        elif c == 0:
-            f.missing += 1
-        else:
-            #print(f"{p} met {c} times")
-            f.extra += (c - 1)
-    return f
+    return score(list(extract_groups(dna, n)), dna[0])
+
 
 def cross(dna1, dna2):
     g1 = random_genes(dna1)
     g2 = random_genes(dna2)
     return [mutated(g) for g in g1 + g2]
+
 
 def mutated(g):
     g = g[:]
@@ -97,36 +80,33 @@ def mutated(g):
 
 
 def random_genes(dna):
-    return shuffled(dna)[:ceil(len(dna) * (0.25 + (random() * 0.5)))]
+    return shuffled(dna)[: ceil(len(dna) * (0.25 + (random() * 0.5)))]
 
 
 def show_fitness(dna, n):
-    f = fitness(dna, n)
-    print(f"{f.fitness} ({f})")
+    print(fitness(dna, n))
 
 
 def population(people, n, size=population_size):
     return [random_dna(people, n) for _ in range(size)]
 
-def best_worst(pop, n):
-    key = lambda o: fitness(o, n).fitness
-    best = max(pop, key=key)
-    worst = min(pop, key=key)
-    best_f = fitness(best, n)
-    worst_f = fitness(worst, n)
-    print(f"best: {best_f} => {best_f.fitness}; worst: {worst_f} => {worst_f.fitness}")
 
+def best_worst(pop, n):
+    key = lambda o: fitness(o, n).score
+    best = min(pop, key=key)
+    worst = max(pop, key=key)
+    print(f"best: {fitness(best, n)}; worst: {fitness(worst, n)}")
 
 
 def next_generation(pop, n):
-    by_fitness = sorted(pop, key=lambda x: fitness(x, n).fitness, reverse=True)
+    by_fitness = sorted(pop, key=lambda x: fitness(x, n).score)
 
     num_survivors = floor(len(pop) * overlap)
 
     newgen = by_fitness[:num_survivors]
 
     for i in range(0, len(pop), 2):
-        mom, dad = by_fitness[i:i+2]
+        mom, dad = by_fitness[i : i + 2]
         for _ in range(children_per_pair):
             newgen.append(cross(mom, dad))
             if len(newgen) == len(pop):
@@ -139,7 +119,6 @@ if __name__ == "__main__":
 
     N = 4
     pop = population(people, N)
-
 
     for _ in range(1000):
         best_worst(pop, N)
