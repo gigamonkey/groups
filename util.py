@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
-from itertools import combinations
+from collections import defaultdict
 from dataclasses import dataclass
+from itertools import combinations
+from random import shuffle
 
 
 @dataclass
@@ -35,3 +37,30 @@ def score(groups, people):
     all_pairs = pairs(people)
     meetings = [p for g in groups for p in pairs(g)]
     return Score(len(all_pairs), len(meetings), len(all_pairs - set(meetings)))
+
+
+def check(groups, people):
+    """
+    Check that everyone meets everyone else and print out the overall
+    score.
+    """
+
+    num_groups = defaultdict(int)
+    counts = defaultdict(lambda: defaultdict(int))
+    met = defaultdict(set)
+
+    for g in groups:
+        for p in g:
+            num_groups[p] += 1
+            for x in g:
+                counts[p][x] += 1
+            met[p].update(g)
+
+    assert all(v == people for v in met.values())
+    print(score(groups, people))
+
+
+def shuffled(xs):
+    copy = xs[:]
+    shuffle(copy)
+    return copy

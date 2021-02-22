@@ -13,19 +13,14 @@
 # a permutation.
 
 
-from collections import Counter
-from dataclasses import dataclass
 from itertools import combinations
 from math import ceil
 from math import floor
-from random import choices
 from random import random
 from random import randrange
 from random import shuffle
-import json
-import sys
 
-from score import score
+from util import score
 
 population_size = 1_000
 mutation_probability = 0.01
