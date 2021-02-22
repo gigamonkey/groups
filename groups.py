@@ -30,18 +30,21 @@ def random_person(people, g):
 
 def make_group(pairs, people, met, n):
     g = set()
-    while n > 0:
+    to_add = n
+    while to_add > 0:
         already_met = g | {p2 for p in g for p2 in met[p]}
         to_add = (
-            (next_pair(pairs, disjoint(already_met)) if n > 1 else None)
+            (next_pair(pairs, disjoint(already_met)) if to_add > 1 else None)
             or next_pair(pairs, one_new(already_met))
             or (
-                next_pair(pairs, disjoint(g)) if n > 1 else next_pair(pairs, one_new(g))
+                next_pair(pairs, disjoint(g))
+                if to_add > 1
+                else next_pair(pairs, one_new(g))
             )
             or random_person(people, g)
         )
-        n -= len(to_add)
         g.update(to_add)
+        to_add = n - len(g)
 
     return tuple(sorted(g))
 
