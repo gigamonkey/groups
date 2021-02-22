@@ -3,13 +3,14 @@
 "Group people so everyone meets everyone."
 
 import sys
-from argparse import ArgumentParser, FileType
+from argparse import ArgumentParser
+from argparse import FileType
 from collections import defaultdict
-from itertools import combinations
 from random import choice
 
-def make_pairs(people):
-    return {frozenset(p) for p in combinations(people, 2)}
+from util import pairs
+from util import score
+
 
 def next_pair(pairs, fn):
     return next(filter(fn, pairs), None)
@@ -19,69 +20,57 @@ def disjoint(g):
     return lambda p: not (p & g)
 
 
-def overlapping(g):
-    return lambda p: len(p & g) == 1
+def one_new(g):
+    return lambda p: len(p - g) == 1
 
 
 def random_person(people, g):
     return {choice(list(people - g))}
 
 
-def make_group(pairs, people, n):
-    print(f"New group {len(pairs)} pairs left.")
+def make_group(pairs, people, met, n):
     g = set()
-    while n > 0:
+    to_add = n
+    while to_add > 0:
+        already_met = g | {p2 for p in g for p2 in met[p]}
         to_add = (
-            (next_pair(pairs, disjoint(g)) if n > 1 else None)
-            or next_pair(pairs, overlapping(g))
+            (next_pair(pairs, disjoint(already_met)) if to_add > 1 else None)
+            or next_pair(pairs, one_new(already_met))
+            or (
+                next_pair(pairs, disjoint(g))
+                if to_add > 1
+                else next_pair(pairs, one_new(g))
+            )
             or random_person(people, g)
         )
-        if len(to_add) == 1:
-            print(f"Adding random person: {list(to_add)[0]}")
-        else:
-            print(f"Adding pair: {to_add}")
-
-        n -= len(to_add)
         g.update(to_add)
+        to_add = n - len(g)
 
-    print(f"Group {tuple(sorted(g))}")
-    print()
     return tuple(sorted(g))
 
 
 def groups(people, size):
-    pairs = make_pairs(people)
+    to_meet = pairs(people)
+    met = defaultdict(set)
 
-    while pairs:
-        g = make_group(pairs, people, size)
-        pairs -= make_pairs(g)
+    while to_meet:
+        g = make_group(to_meet, people, met, size)
+        for p in g:
+            met[p].update(g)
+        to_meet -= pairs(g)
         yield g
 
 
 def check(groups, people):
 
-    num_groups = defaultdict(int)
-    counts = defaultdict(lambda: defaultdict(int))
     met = defaultdict(set)
 
     for g in groups:
         for p in g:
-            num_groups[p] += 1
-            for x in g:
-                counts[p][x] += 1
             met[p].update(g)
 
     assert all(v == people for v in met.values())
-
-    for p, ms in counts.items():
-        for p2, c in ms.items():
-            if c > 1 and p != p2:
-                print(f"{p} met {p2} {c} times.")
-
-    expected = (len(people) - 1) / len(groups[0])
-    avg = sum(n for n in num_groups.values()) / len(people)
-
-    print(f"Expected: {expected:.2f}; Average: {avg:.2f}")
+    print(score(groups, people))
 
 
 if __name__ == "__main__":
