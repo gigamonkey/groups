@@ -15,8 +15,8 @@ def pairs(xs):
     return {frozenset(p) for p in combinations(xs, 2)}
 
 
-def next_pair(pairs, fn):
-    return next(filter(fn, pairs), None)
+def previous_meetings(met, group):
+    return lambda pair: sum(p in met[g] for p in (pair - group) for g in group)
 
 
 def disjoint(g):
@@ -28,60 +28,19 @@ def one_new(g):
 
 
 def random_person(people, g):
-    return {choice(list(people - g))}
-
-
-def repeated_meeting(met, group):
-    return lambda pair: sum(p in met[g] for p in (pair - group) for g in group)
-
-
-def overlapping(g):
-    return lambda p: len(p - g) == 1
+    return choice(list(people - g))
 
 
 def make_group(pairs, people, met, n):
     g = set()
     to_add = n
     while to_add > 0:
-        candidates = pairs if to_add > 1 else filter(overlapping(g), pairs)
-        if p := min(candidates, key=repeated_meeting(met, g), default=None):
-            pairs.remove(p)
+        candidates = filter(disjoint(g) if to_add > 1 else one_new(g), pairs)
+        if p := min(candidates, key=previous_meetings(met, g), default=None):
             g.update(p)
         else:
-            g.update(random_person(people, g))
+            g.add(random_person(people, g))
         to_add = n - len(g)
-
-    assert len(g) == n, g
-    return tuple(sorted(g))
-
-
-def OLDmake_group(pairs, people, met, n):
-    g = set()
-    to_add = n
-    while to_add > 0:
-        already_met = g | {p2 for p in g for p2 in met[p]}
-        to_add = (
-            # If we have space get a whole new pair of two new people nobody has met
-            (to_add > 1 and next_pair(pairs, disjoint(already_met)))
-            # Otherwise cover a new pair that adds at least one person
-            # no one has met. (This might add one new person plus
-            # someone who is already in the group or one new person
-            # and another person who's not in the group but who
-            # someone in the group has already met)
-            or next_pair(pairs, one_new(already_met))
-            # Otherwise, look for a new pair to cover with two new
-            # people in the group even if one or both of them have
-            # already been met by someone in the group.
-            or (to_add > 1 and next_pair(pairs, disjoint(g)))
-            # Or a new pair with one new person for this group, even
-            # though they've already met someone in the group.
-            or next_pair(pairs, one_new(g))
-            # Bail and just put a random person in.
-            or random_person(people, g)
-        )
-        g.update(to_add)
-        to_add = n - len(g)
-
     return tuple(sorted(g))
 
 
