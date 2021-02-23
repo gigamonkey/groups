@@ -19,8 +19,8 @@ def previous_meetings(met, group):
     return lambda pair: sum(p in met[g] for p in (pair - group) for g in group)
 
 
-def disjoint(g):
-    return lambda p: not (p & g)
+def not_present(g):
+    return lambda p: len(p - g) > 0
 
 
 def one_new(g):
@@ -35,7 +35,7 @@ def make_group(pairs, people, met, n):
     g = set()
     to_add = n
     while to_add > 0:
-        candidates = filter(disjoint(g) if to_add > 1 else one_new(g), pairs)
+        candidates = filter(not_present(g) if to_add > 1 else one_new(g), pairs)
         if p := min(candidates, key=previous_meetings(met, g), default=None):
             g.update(p)
         else:
